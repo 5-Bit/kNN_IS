@@ -1,5 +1,9 @@
 #! /bin/bash
 
+if [ "$1" == "-b" ] || [ "$1" == "--build" ] || [ ! -f target/kNN_IS-2.0.jar ]; then
+  echo "Building kNN_IS";
+  ./build.sh
+fi
 
 if [ -z "${SPARK_HOME}" ]; then
   SPARK_HOME=/usr/local/bin/spark-2.0.0-bin-hadoop2.7
@@ -7,10 +11,6 @@ fi
 
 . "${SPARK_HOME}/sbin/stop-master.sh"
 . "${SPARK_HOME}/sbin/start-master.sh"
-
-if [ ! -f target/kNN_IS-2.0.jar ]; then
-  ./build.sh
-fi
 
 NUM_CORES=1
 KEEL_HEADER=/home/sparky/knn/Adult/Keel/adult-headers.txt
