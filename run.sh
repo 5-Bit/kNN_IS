@@ -8,6 +8,10 @@ fi
 . "${SPARK_HOME}/sbin/stop-master.sh"
 . "${SPARK_HOME}/sbin/start-master.sh"
 
+if [ ! -f target/kNN_IS-2.0.jar ]; then
+  ./build.sh
+fi
+
 NUM_CORES=1
 KEEL_HEADER=/home/sparky/knn/Adult/Keel/adult-headers.txt
 TRAINING_SET=/home/sparky/knn/Adult/Keel/adult-10-1tra.dat
