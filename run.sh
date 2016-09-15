@@ -1,6 +1,9 @@
 #! /bin/bash
 
-SPARK_HOME=/usr/local/bin/spark-2.0.0-bin-hadoop2.7
+
+if [ -z "${SPARK_HOME}" ]; then
+  SPARK_HOME=/usr/local/bin/spark-2.0.0-bin-hadoop2.7
+fi
 
 . "${SPARK_HOME}/sbin/stop-master.sh"
 . "${SPARK_HOME}/sbin/start-master.sh"
