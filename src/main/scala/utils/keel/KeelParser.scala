@@ -3,6 +3,8 @@ package utils.keel
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
+// import sext._
+import org.apache.log4j.Logger
 
 /**
  * Gets the information from the header in order to normalize or parser to LabeledPoint or Array[Double] a data set.
@@ -33,8 +35,10 @@ class KeelParser extends Serializable {
    * @param str string to parser
    */
   def getLabels(str: String): Array[String] = {
-    var result = str.substring(str.indexOf("{") + 1, str.indexOf("}")).replaceAll(" ", "").split(",")
-    result
+   val result = str.substring(str.indexOf("{") + 1, str.indexOf("}")).replaceAll(" ", "").split(",")
+   // println("This is the array of labels")
+   // println(result.deep.mkString("\n"))
+   result
   }
 
   /**
@@ -57,6 +61,7 @@ class KeelParser extends Serializable {
    * @param file path of the header
    */
   def calculateParserFromHeader(sc: SparkContext, file: String) = {
+    var logger = Logger.getLogger(this.getClass())
     //Reading header. Each element is a line
     val header = sc.textFile(file)
     var linesHeader = header.collect
@@ -66,7 +71,9 @@ class KeelParser extends Serializable {
     numFeatures = 0
     for (i <- 0 to (linesHeader.length - 1)) {
       if (linesHeader(i).toUpperCase().contains("@INPUTS")) {
-        numFeatures = linesHeader(i).length - linesHeader(i).replaceAllLiterally(",", "").length + 2
+        println("Length of headers:")
+        println(linesHeader(i).count(_ == ','))
+        numFeatures = linesHeader(i).count(_ == ',') + 2 // + 10 for big fudge
       } else if (linesHeader(i).toUpperCase().contains("@OUTPUTS")) {
         className = linesHeader(i).split(" ")(1).toUpperCase()
       }
@@ -84,20 +91,21 @@ class KeelParser extends Serializable {
     var auxParserClasses = 0.0
     var auxNumFeature = 0
     for (i <- 0 to (linesHeader.length - 1)) {
-      if (linesHeader(i).toUpperCase().contains("@ATTRIBUTE " + className)) {
-        numClass = linesHeader(i).length - linesHeader(i).replaceAllLiterally(",", "").length + 1
+      val header = linesHeader(i).toUpperCase()
+      if (header.contains("@ATTRIBUTE " + className)) {
+        numClass = linesHeader.count(_ == ',') + 1
         val labelsClasses = getLabels(linesHeader(i)) //Array of String with the labels of the objective variable
         for (key <- labelsClasses) { //Calculate map for parser label classes
           conv(numFeatures - 1) += (key -> auxParserClasses)
           isCategorical(auxNumFeature) = true
           auxParserClasses = auxParserClasses + 1
         }
-      } else if (linesHeader(i).toUpperCase().contains("[")) { //Real or integer feature
+      } else if (header.contains("[")) { //Real or integer feature
         val range = getRange(linesHeader(i)) //Min and max of the feature
         conv(auxNumFeature) += ("min" -> range(0), "max" -> range(1)) //Do the parser for this feature
         isCategorical(auxNumFeature) = false
         auxNumFeature = auxNumFeature + 1 //Increase for the next feature
-      } else if (linesHeader(i).toUpperCase().contains("{") && !(linesHeader(i).toUpperCase().contains("@ATTRIBUTE CLASS"))) {
+      } else if (header.contains("{") && !(header.contains("@ATTRIBUTE CLASS"))) {
         val labelsClasses = getLabels(linesHeader(i)) //Array String with the labels of the feature
         val size = labelsClasses.length
 
@@ -115,11 +123,11 @@ class KeelParser extends Serializable {
         isCategorical(auxNumFeature) = true
 
         auxNumFeature = auxNumFeature + 1
-      } else if (linesHeader(i).toUpperCase().contains("REAL") && !(linesHeader(i).toUpperCase().contains("@ATTRIBUTE CLASS"))) {
+      } else if (header.contains("REAL") && !(header.contains("@ATTRIBUTE CLASS"))) {
         conv(auxNumFeature) += ("no-bound" -> 0, "no-bound" -> 0) //Do the parser for this feature
         isCategorical(auxNumFeature) = false
         auxNumFeature = auxNumFeature + 1 //Increase for the next feature
-      }
+      } 
     } //end for
 
   }
@@ -146,7 +154,13 @@ class KeelParser extends Serializable {
       } else if (conv(i).contains("no-bound")) {
         result(i) = auxArray(i).toDouble
       } else {
-        result(i) = conv(i).get(auxArray(i)).get
+        /*
+        println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        println(auxArray.deep.mkString(", "))
+        println(conv.deep.mkString(", "))
+        println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        */
+        result(i) = conv(i).get(auxArray(i).trim()).get
       }
     }
 

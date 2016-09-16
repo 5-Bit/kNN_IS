@@ -217,14 +217,32 @@ class kNN_IS(train: RDD[LabeledPoint], test: RDD[LabeledPoint], k: Int, distance
     val rightClass: Int = sample._2._1.label.toInt
     val predictedNeigh = sample._2._2
 
-    var auxClas = new Array[Int](numClass)
+    println("What numclass is: " + numClass.toString())
+    var auxClas = new Array[Int](numClass + 10) // YO, THIS IS CRAZY!!!1!
     var clas = 0
     var numVotes = 0
     for (j <- 0 until k) {
-      auxClas(predictedNeigh(j)(1).toInt) = auxClas(predictedNeigh(j)(1).toInt) + 1
-      if (auxClas(predictedNeigh(j)(1).toInt) > numVotes) {
-        clas = predictedNeigh(j)(1).toInt
-        numVotes = auxClas(predictedNeigh(j)(1).toInt)
+      /*
+       * EPIC COMMENT
+       * This code will be needed later. 
+       * My only conclusion is that Señior Maillo was dropping acid and drinking at the same time. 
+       * NO KNOWLEDGE OF PARSERS WAS INVOLVED. THIS CODE SUCKS!1!!
+       * !@!!#$$@#!#!@!$!!@!@!#$@#
+       */
+      // println("\n\n\n\n\nNaze:")
+      val naze = predictedNeigh(j)
+      // println(naze.deep.mkString(", "))
+      // println("++++ First nay")
+      // println("*** LEN!!!: " + naze.length)
+      val firstNay = naze(1)
+      // println("!@!#@@#@: " + firstNay)
+      val intNay = firstNay.toInt
+      // println("++++" + intNay + "@#$@$++++")
+      auxClas(intNay) = auxClas(intNay) + 1
+      // println("++++" + intNay + "2++++")
+      if (auxClas(intNay) > numVotes) {
+        clas = intNay
+        numVotes = auxClas(intNay)
       }
 
     }
