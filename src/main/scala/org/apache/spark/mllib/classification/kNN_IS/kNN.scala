@@ -19,6 +19,7 @@ class KNN(val train: ArrayBuffer[LabeledPoint], val k: Int, val distanceType: Di
    * @param x Test sample
    * @return Distance and class of each nearest neighbors
    */
+  //TODO: Change Array[Array[Float]] to Array[(Float, Float)]
   def neighbors(x: Vector): Array[Array[Float]] = {
     var nearest = Array.fill(k)(-1)
     var distA = Array.fill(k)(0.0f)

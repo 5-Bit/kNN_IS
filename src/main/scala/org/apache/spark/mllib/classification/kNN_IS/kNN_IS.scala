@@ -109,7 +109,22 @@ class kNN_IS(train: RDD[LabeledPoint], test: RDD[LabeledPoint], k: Int, distance
         testBroadcast = broadcastTest(testWithKey.filterByRange(subdel, topdel).map(line => line._2).collect, testWithKey.sparkContext)
 
       if (output == null) {
-        output = testWithKey.join(train.mapPartitions(split => knn(split, testBroadcast, subdel)).reduceByKey(combine)).map(sample => calculatePredictedRightClassesFuzzy(sample)).cache
+        //val addToBasket = (s: String) => {
+        //      fruits += s
+        //          println(fruits.mkString(", "))
+        //}
+        //output = testWithKey.join(train.mapPartitions(split => knn(split, testBroadcast, subdel)).reduceByKey(combine)).map(sample => calculatePredictedRightClassesFuzzy(sample)).cache
+        output = testWithKey.join(
+          train.mapPartitions(split => 
+            knn(split, testBroadcast, subdel)
+          ).reduceByKey(combine)
+        ).map(sample => 
+          calculatePredictedRightClassesFuzzy(sample)
+        ).cache
+        
+        //val partitions = train.mapPartitions(split => knn(split, testBroadcast, subdel)).reduceByKey(combine)
+        //output = partitions.map(sample => calculatePredictedRightClassesFuzzy(sample)).cache
+      
       } else {
         output = output.union(testWithKey.join(train.mapPartitions(split => knn(split, testBroadcast, subdel)).reduceByKey(combine)).map(sample => calculatePredictedRightClassesFuzzy(sample))).cache
       }
@@ -138,16 +153,13 @@ class kNN_IS(train: RDD[LabeledPoint], test: RDD[LabeledPoint], k: Int, distance
     var train = new ArrayBuffer[LabeledPoint]
     val size = testSet.value.length
 
-    var dist: Distance.Value = null
     //Distance MANHATTAN or EUCLIDEAN
-    if (distanceType == 1)
-      dist = Distance.Manhattan
-    else
-      dist = Distance.Euclidean
+    val dist = if (distanceType == 1) { Distance.Manhattan } else { Distance.Euclidean }
 
     //Join the train set
-    while (iter.hasNext)
+    while (iter.hasNext) {
       train.append(iter.next)
+    }
 
     var knnMemb = new KNN(train, k, dist, numClass)
 
@@ -211,45 +223,33 @@ class kNN_IS(train: RDD[LabeledPoint], test: RDD[LabeledPoint], k: Int, distance
    * @return predicted and right class.
    */
   def calculatePredictedRightClassesFuzzy(sample: (Int, (LabeledPoint, Array[Array[Float]]))): (Double, Double) = {
-
     val size = sample._2._2.length
     //val numFeatures = test.value.length
     val rightClass: Int = sample._2._1.label.toInt
     val predictedNeigh = sample._2._2
 
+    // TODO: Figure out this bug
     println("What numclass is: " + numClass.toString())
-    var auxClas = new Array[Int](numClass + 10) // YO, THIS IS CRAZY!!!1!
-    var clas = 0
-    var numVotes = 0
-    for (j <- 0 until k) {
-      /*
-       * EPIC COMMENT
-       * This code will be needed later. 
-       * My only conclusion is that Señior Maillo was dropping acid and drinking at the same time. 
-       * NO KNOWLEDGE OF PARSERS WAS INVOLVED. THIS CODE SUCKS!1!!
-       * !@!!#$$@#!#!@!$!!@!@!#$@#
-       */
-      // println("\n\n\n\n\nNaze:")
-      val naze = predictedNeigh(j)
-      // println(naze.deep.mkString(", "))
-      // println("++++ First nay")
-      // println("*** LEN!!!: " + naze.length)
-      val firstNay = naze(1)
-      // println("!@!#@@#@: " + firstNay)
-      val intNay = firstNay.toInt
-      // println("++++" + intNay + "@#$@$++++")
-      auxClas(intNay) = auxClas(intNay) + 1
-      // println("++++" + intNay + "2++++")
-      if (auxClas(intNay) > numVotes) {
-        clas = intNay
-        numVotes = auxClas(intNay)
-      }
+    val possibleClasses = new Array[Float](numClass + 10) // YO, THIS IS CRAZY!!!1!
 
+    var classification = 0
+    var numVotes = 0f
+    
+    for (j <- 0 until k) {
+      // Each neighbor gets a vote inversely proportional to 
+      // it's distance from the record in question
+      // TODO: Handle 0 and potentially squaring
+      val voteStrengthOfNeighbor = 1 / predictedNeigh(j)(0)
+      val classOfNeighbor = predictedNeigh(j)(1).toInt
+      possibleClasses(classOfNeighbor) = possibleClasses(classOfNeighbor) + voteStrengthOfNeighbor 
+      if (possibleClasses(classOfNeighbor) > numVotes) {
+        classification = classOfNeighbor
+        numVotes = possibleClasses(classOfNeighbor)
+      }
     }
 
-    (clas.toDouble, rightClass.toDouble)
+    (classification.toDouble, rightClass.toDouble)
   }
-
 }
 
 /**
