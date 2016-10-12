@@ -1,3 +1,5 @@
-CREATE TABLE Test
+DROP TABLE IF EXISTS Test;
+
+CREATE TABLE iris (SepalLength double, SepalWidth double, PetalLength double, PetalWidth double, Class string)
 USING csv
-OPTIONS (path "data.csv", header "true", inferSchema "true");
+OPTIONS (path "/home/sparky/iris/iris.csv", header "false", inferSchema "false");
