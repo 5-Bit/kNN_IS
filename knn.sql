@@ -87,12 +87,12 @@ Select id, actual_class, class as predictedClass from (
 				iris_id_dist.*,
 				ROW_NUMBER() OVER (Partition by id Order By iris_id_dist.dist asc ) as dist_class
 			from iris_id_dist
-		) derpy
-		where derpy.dist_class <= 5
+		) top_n
+		where top_n.dist_class <= 5
 		group by id, class, actual_class
-	) as lerpy
-) as outie
-where outie.vote_rank = 1
+	) as ranked
+) as topped
+where topped.vote_rank = 1
 order by id asc ;
 
 Select * from confusion;
